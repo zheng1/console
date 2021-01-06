@@ -159,9 +159,8 @@ const handleLogout = async ctx => {
 const handleOAuthLogin = async ctx => {
   let user = null
   const error = {}
-
   try {
-    user = await oAuthLogin(ctx.query)
+    user = await oAuthLogin({ ...ctx.query, oauthName: ctx.params.name })
   } catch (err) {
     ctx.app.emit('error', err)
     Object.assign(error, {

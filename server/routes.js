@@ -72,7 +72,7 @@ router
   .post('/logout', handleLogout)
   .get('/login', renderLogin)
 
-  .get('/oauth/redirect', handleOAuthLogin)
+  .get('/oauth/redirect/:name', handleOAuthLogin)
 
   // markdown template
   .get('/blank_md', renderMarkdown)

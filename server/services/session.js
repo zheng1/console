@@ -90,10 +90,11 @@ const getNewToken = async ctx => {
   return newToken
 }
 
-const oAuthLogin = async params => {
+const oAuthLogin = async ({ oauthName, ...params }) => {
   const resp = await send_gateway_request({
     method: 'GET',
-    url: `/oauth/callback/${params.state}?code=${params.code}`,
+    url: `/oauth/callback/${oauthName}`,
+    params,
   })
 
   if (!resp.access_token) {
@@ -242,29 +243,39 @@ const getOAuthInfo = async () => {
   if (resp && !isEmpty(resp.identityProviders)) {
     resp.identityProviders.forEach(item => {
       if (item && item.provider) {
-        const title = item.name
-        const params = {
-          state: item.name,
-          client_id: item.provider.clientID,
-          response_type: 'code',
+        let url
+        let params = {}
+        const authURL = get(item, 'provider.endpoint.authURL')
+
+        if (authURL) {
+          url = authURL
+          params = {
+            state: item.name,
+            client_id: item.provider.clientID,
+            response_type: 'code',
+          }
+
+          if (item.provider.redirectURL) {
+            params.redirect_uri = item.provider.redirectURL
+          }
+
+          if (item.provider.scopes && item.provider.scopes.length > 0) {
+            params.scope = item.provider.scopes.join(' ')
+          }
+        } else if (item.provider.casServerURL) {
+          params = { service: item.provider.redirectURL }
+          url = item.provider.casServerURL
         }
 
-        if (item.provider.redirectURL) {
-          params.redirect_uri = item.provider.redirectURL
+        if (url) {
+          url = `${url}?${Object.keys(params)
+            .map(
+              key =>
+                `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
+            )
+            .join('&')}`
+          servers.push({ title: item.name, url })
         }
-
-        if (item.provider.scopes && item.provider.scopes.length > 0) {
-          params.scope = item.provider.scopes.join(' ')
-        }
-
-        const url = `${item.provider.endpoint.authURL}?${Object.keys(params)
-          .map(
-            key =>
-              `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`
-          )
-          .join('&')}`
-
-        servers.push({ title, url })
       }
     })
   }
